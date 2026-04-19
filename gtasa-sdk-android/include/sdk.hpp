@@ -1,11 +1,13 @@
 #pragma once
 
+#define SDK_API __attribute__((visibility("default")))
+
+namespace sdk::internal { class Context; }
+
 namespace sdk {
 
-namespace internal { class Context; }
+SDK_API internal::Context& GetContext();
 
-internal::Context& GetContext();
-
-bool Init();
+SDK_API bool Init();
 
 }

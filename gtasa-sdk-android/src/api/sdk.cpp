@@ -6,7 +6,7 @@
 
 namespace sdk {
 
-internal::Context& GetContext() {
+SDK_API internal::Context& GetContext() {
 	static internal::Context ctx("libGTASA.so");
 	return ctx;
 }
@@ -15,7 +15,7 @@ bool IsContextValid() {
 	return static_cast<bool>(GetContext());
 }
 
-bool Init() {
+SDK_API bool Init() {
 	GlossInit(false);
 
 	if(!IsContextValid())

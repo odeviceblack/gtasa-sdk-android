@@ -1,93 +1,55 @@
 cmake_minimum_required(VERSION 3.10)
-
-project(game-sdk)
+project(game-sdk VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ========================================
-# BUILD TYPE (default = Release)
-# ========================================
+# Tipo de build padrão
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# ========================================
-# FLAGS BASE (comuns)
-# ========================================
-set(COMMON_FLAGS "-ffunction-sections -fdata-sections")
+# Opção para biblioteca compartilhada (ON = .so, OFF = .a)
+option(BUILD_SHARED_LIBS "Build shared library" ON)
 
-# ========================================
-# DEBUG
-# ========================================
-set(CMAKE_CXX_FLAGS_DEBUG
-    "-O0 -g -DDEBUG -fno-omit-frame-pointer ${COMMON_FLAGS}"
-)
+# Fontes
+file(GLOB_RECURSE SRC_FILES src/*.cpp)
 
-# ========================================
-# RELEASE (foco: tamanho + performance)
-# ========================================
-set(CMAKE_CXX_FLAGS_RELEASE
-    "-O3 -DNDEBUG ${COMMON_FLAGS}"
-)
+# Biblioteca principal
+add_library(game-sdk ${SRC_FILES})
 
-# Remove lixo no link (ESSENCIAL)
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE
-    "-Wl,--gc-sections -s"
-)
-
-# ========================================
-# Caminhos
-# ========================================
-set(SDK_ROOT ${CMAKE_SOURCE_DIR})
-set(SRC_DIR ${SDK_ROOT}/src)
-set(INCLUDE_DIR ${SDK_ROOT}/include ${SDK_ROOT}/third_party ${SDK_ROOT}/src/internal)
-set(LIB_DIR ${SDK_ROOT}/libs)
-
-# ========================================
-# Coleta automática de fontes
-# ========================================
-file(GLOB_RECURSE SRC_FILES
-    ${SRC_DIR}/*.cpp
-)
-
-# ========================================
-# Biblioteca
-# ========================================
-add_library(game-sdk SHARED ${SRC_FILES})
-
-# ========================================
-# Includes
-# ========================================
+# Diretórios de inclusão
 target_include_directories(game-sdk
-    PUBLIC
-        ${INCLUDE_DIR}
-        ${SRC_DIR}
+    PUBLIC include
+    PRIVATE src
+            src/internal
+            third_party
 )
 
-# ========================================
-# Lib externa (ABI)
-# ========================================
-set(GLOSS_LIB_PATH ${LIB_DIR}/${ANDROID_ABI}/libGlossHook.a)
-set(LOGGER_LIB_PATH ${LIB_DIR}/${ANDROID_ABI}/libLogger.a)
-
-add_library(GlossHook STATIC IMPORTED)
-set_target_properties(GlossHook PROPERTIES
-    IMPORTED_LOCATION ${GLOSS_LIB_PATH}
-)
-
-# ========================================
-# DEFINES
-# ========================================
+# Definições
 target_compile_definitions(game-sdk PRIVATE
+    GAME_SDK_BUILD
     $<$<CONFIG:Debug>:GTASA_DEBUG>
     $<$<CONFIG:Release>:GTASA_RELEASE>
 )
 
-# ========================================
-# LINK
-# ========================================
-target_link_libraries(game-sdk
-    GlossHook
-    log
+# Flags de compilação (ajuste conforme necessário)
+target_compile_options(game-sdk PRIVATE
+    -ffunction-sections
+    -fdata-sections
+    $<$<CONFIG:Debug>:-O0 -g3 -ggdb3 -fno-omit-frame-pointer -fno-inline>
+    $<$<CONFIG:Release>:-O3 -DNDEBUG -flto -fomit-frame-pointer -fno-exceptions -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden>
 )
+
+# Flags de link
+target_link_options(game-sdk PRIVATE
+    $<$<CONFIG:Release>:-Wl,--gc-sections -Wl,--strip-all -flto>
+)
+
+# Dependências externas (apenas Android)
+if(ANDROID)
+    set(GLOSS_LIB_PATH ${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}/libGlossHook.a)
+    if(EXISTS ${GLOSS_LIB_PATH})
+        target_link_libraries(game-sdk PRIVATE ${GLOSS_LIB_PATH} log)
+    endif()
+endif()
