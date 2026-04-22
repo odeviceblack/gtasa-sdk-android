@@ -4,10 +4,13 @@ SDK para desenvolvimento de modificações no GTASA: Android.
 
 ## 📂 Estrutura de Diretórios
 
-- `include/` : Headers públicos do SDK.
-- `src/api/` : Implementação das funções exportadas.
-- `src/runtime/` : Hooks internos e lógica de bootstrap.
-- `libs/` : Dependências compiladas por arquitetura.
+- `examples/` : Exemplos de uso.
+- `gtasa-sdk-android/cmake/` : Arquivos cmake auxiliares.
+- `gtasa-sdk-android/include/` : Headers públicos do SDK.
+- `gtasa-sdk-android/src/api/` : Implementação das funções exportadas.
+- `gtasa-sdk-android/src/runtime/` : Hooks internos e lógica de bootstrap.
+- `gtasa-sdk-android/libs/` : Dependências compiladas por arquitetura.
+- `scripts/` : Ferramentas de automação.
 
 ## ⚙️ Requisitos
 

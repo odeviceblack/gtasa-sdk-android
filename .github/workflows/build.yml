@@ -1,0 +1,86 @@
+# .github/workflows/build.yml
+name: Build SDK with NDK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        abi: [armeabi-v7a, arm64-v8a]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install NDK (r29)
+        run: |
+          NDK_VERSION="r29"
+          NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
+          wget -q "https://dl.google.com/android/repository/${NDK_ZIP}"
+          unzip -q ${NDK_ZIP}
+          echo "ANDROID_NDK_HOME=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+
+      - name: Generate sources list
+        run: |
+          cd gtasa-sdk-android
+          python ../scripts/gensrc.py
+        # Ajuste o caminho conforme a estrutura real:
+        # O script está em ./scripts/gensrc.py relativo à raiz do repo
+        # Mas a execução deve ser feita no contexto do projeto CMake
+
+      - name: Configure CMake (Shared Library)
+        run: |
+          cd gtasa-sdk-android
+          mkdir -p build-shared
+          cd build-shared
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+
+      - name: Build Shared Library
+        run: |
+          cd gtasa-sdk-android/build-shared
+          make -j$(nproc)
+
+      - name: Configure CMake (Static Library)
+        run: |
+          cd gtasa-sdk-android
+          mkdir -p build-static
+          cd build-static
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+
+      - name: Build Static Library
+        run: |
+          cd gtasa-sdk-android/build-static
+          make -j$(nproc)
+
+      - name: Upload artifacts (optional)
+        uses: actions/upload-artifact@v7
+        with:
+          name: GTASASdk-${{ matrix.abi }}
+          path: |
+            gtasa-sdk-android/build-shared/libGTASASdk.so
+            gtasa-sdk-android/build-static/libGTASASdk.a
